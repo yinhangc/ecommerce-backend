@@ -15,7 +15,20 @@ export class StripeService {
 
   async createCheckoutSession() {
     const session = await this.stripe.checkout.sessions.create({
-      line_items: [],
+      line_items: [
+        {
+          price_data: {
+            currency: 'hkd',
+            product_data: {
+              name: 'T-shirt',
+              description: '',
+              metadata: { dbId: '' },
+            },
+            unit_amount: 1,
+          },
+          quantity: 1,
+        },
+      ],
       mode: 'payment',
       success_url: this.configService.get('STRIPE_PAYMENT_SUCCESS_URL'),
       cancel_url: this.configService.get('STRIPE_PAYMENT_FAILURE_URL'),
