@@ -13,26 +13,29 @@ export class StripeService {
     this.stripe = new Stripe(this.apiKey);
   }
 
-  async createCheckoutSession() {
+  async createCheckoutSession(): Promise<{ clientSecret: string }> {
+    console.log('createCheckoutSession 1');
     const session = await this.stripe.checkout.sessions.create({
+      ui_mode: 'embedded',
       line_items: [
         {
           price_data: {
             currency: 'hkd',
             product_data: {
               name: 'T-shirt',
-              description: '',
-              metadata: { dbId: '' },
+              description: 'im a T-shirt',
+              metadata: { dbId: 1 },
             },
-            unit_amount: 1,
+            unit_amount: 5000,
           },
           quantity: 1,
         },
       ],
       mode: 'payment',
-      success_url: this.configService.get('STRIPE_PAYMENT_SUCCESS_URL'),
-      cancel_url: this.configService.get('STRIPE_PAYMENT_FAILURE_URL'),
+      payment_method_types: ['alipay', 'card'],
+      return_url: this.configService.get('STRIPE_PAYMENT_RETURN_URL'),
     });
-    console.log('session url', session.url);
+    console.log('createCheckoutSession 2', session);
+    return { clientSecret: session.client_secret };
   }
 }

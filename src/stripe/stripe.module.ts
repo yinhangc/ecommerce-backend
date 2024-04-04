@@ -3,10 +3,7 @@ import { StripeController } from './stripe/stripe.controller';
 import { StripeService } from './stripe/stripe.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 
-@Module({
-  controllers: [StripeController],
-  providers: [StripeService],
-})
+@Module({})
 export class StripeModule {
   static forRootAsync(): DynamicModule {
     return {
