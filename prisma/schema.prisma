@@ -10,5 +10,52 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  url      = env("DB_URL")
+}
+
+enum ProductStatus {
+  ACTIVE
+  INACTIVE
+}
+
+model Product {
+  id            Int             @id @default(autoincrement())
+  name          String          @unique
+  description   String
+  imageUrl      String
+  status        ProductStatus
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  ProductOption ProductOption[]
+  ProductSku    ProductSku[]
+}
+
+model ProductOption {
+  id                 Int                  @id @default(autoincrement())
+  label              String
+  productId          Int
+  product            Product              @relation(fields: [productId], references: [id])
+  ProductOptionValue ProductOptionValue[]
+  ProductSku         ProductSku[]
+}
+
+model ProductOptionValue {
+  id         Int           @id @default(autoincrement())
+  value      String
+  optionId   Int
+  option     ProductOption @relation(fields: [optionId], references: [id])
+  ProductSku ProductSku[]
+}
+
+model ProductSku {
+  sku       String             @unique
+  price     Decimal            @db.Decimal(6, 2)
+  productId Int
+  optionId  Int
+  valueId   Int
+  product   Product            @relation(fields: [productId], references: [id])
+  option    ProductOption      @relation(fields: [optionId], references: [id])
+  value     ProductOptionValue @relation(fields: [valueId], references: [id])
+
+  @@id([productId, optionId, valueId])
 }
