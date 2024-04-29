@@ -2,11 +2,11 @@ import { Type } from 'class-transformer';
 import { ValidateNested } from 'class-validator';
 
 class ProductOptionValueDto {
-  label: string;
+  value: string;
 }
 
 export class ProductOptionDto {
-  name: string;
+  label: string;
 
   @ValidateNested({ each: true })
   @Type(() => ProductOptionValueDto)

@@ -1,12 +1,8 @@
+import { ProductStatus } from '@prisma/client';
 import { Type } from 'class-transformer';
 import { IsArray, IsEnum, ValidateNested } from 'class-validator';
-import { ProductVariantDto } from './productVariant.dto';
 import { ProductOptionDto } from './productOption.dto';
-
-export enum ProductStatus {
-  ACTIVE,
-  INACTIVE,
-}
+import { ProductVariantDto } from './productVariant.dto';
 
 export class ProductDto {
   name: string;

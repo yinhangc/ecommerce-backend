@@ -34,13 +34,12 @@ CREATE TABLE "ProductOptionValue" (
 
 -- CreateTable
 CREATE TABLE "ProductSku" (
+    "id" SERIAL NOT NULL,
     "sku" TEXT NOT NULL,
     "price" DECIMAL(6,2) NOT NULL,
-    "productId" INTEGER NOT NULL,
-    "optionId" INTEGER NOT NULL,
     "valueId" INTEGER NOT NULL,
 
-    CONSTRAINT "ProductSku_pkey" PRIMARY KEY ("productId","optionId","valueId")
+    CONSTRAINT "ProductSku_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
@@ -50,16 +49,10 @@ CREATE UNIQUE INDEX "Product_name_key" ON "Product"("name");
 CREATE UNIQUE INDEX "ProductSku_sku_key" ON "ProductSku"("sku");
 
 -- AddForeignKey
-ALTER TABLE "ProductOption" ADD CONSTRAINT "ProductOption_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "ProductOption" ADD CONSTRAINT "ProductOption_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "ProductOptionValue" ADD CONSTRAINT "ProductOptionValue_optionId_fkey" FOREIGN KEY ("optionId") REFERENCES "ProductOption"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "ProductOptionValue" ADD CONSTRAINT "ProductOptionValue_optionId_fkey" FOREIGN KEY ("optionId") REFERENCES "ProductOption"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "ProductSku" ADD CONSTRAINT "ProductSku_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "ProductSku" ADD CONSTRAINT "ProductSku_optionId_fkey" FOREIGN KEY ("optionId") REFERENCES "ProductOption"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "ProductSku" ADD CONSTRAINT "ProductSku_valueId_fkey" FOREIGN KEY ("valueId") REFERENCES "ProductOptionValue"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "ProductSku" ADD CONSTRAINT "ProductSku_valueId_fkey" FOREIGN KEY ("valueId") REFERENCES "ProductOptionValue"("id") ON DELETE CASCADE ON UPDATE CASCADE;
