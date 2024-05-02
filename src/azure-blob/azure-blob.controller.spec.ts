@@ -1,15 +1,15 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ImageController } from './image.controller';
+import { AzureBlobController } from './azure-blob.controller';
 
-describe('ImageController', () => {
-  let controller: ImageController;
+describe('AzureBlobController', () => {
+  let controller: AzureBlobController;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      controllers: [ImageController],
+      controllers: [AzureBlobController],
     }).compile();
 
-    controller = module.get<ImageController>(ImageController);
+    controller = module.get<AzureBlobController>(AzureBlobController);
   });
 
   it('should be defined', () => {

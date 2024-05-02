@@ -1,15 +1,15 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ImageService } from './image.service';
+import { AzureBlobService } from './azure-blob.service';
 
-describe('ImageService', () => {
-  let service: ImageService;
+describe('AzureBlobService', () => {
+  let service: AzureBlobService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [ImageService],
+      providers: [AzureBlobService],
     }).compile();
 
-    service = module.get<ImageService>(ImageService);
+    service = module.get<AzureBlobService>(AzureBlobService);
   });
 
   it('should be defined', () => {

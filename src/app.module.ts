@@ -2,10 +2,10 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { StripeModule } from './stripe/stripe.module';
-import { ProductModule } from './products/product.module';
+import { AzureBlobModule } from './azure-blob/azure-blob.module';
 import { PrismaModule } from './prisma/prisma.module';
-import { ImageModule } from './images/image.module';
+import { ProductModule } from './products/product.module';
+import { StripeModule } from './stripe/stripe.module';
 
 @Module({
   imports: [
@@ -13,7 +13,7 @@ import { ImageModule } from './images/image.module';
     StripeModule.forRootAsync(),
     ProductModule,
     PrismaModule,
-    ImageModule,
+    AzureBlobModule,
   ],
   controllers: [AppController],
   providers: [AppService],
