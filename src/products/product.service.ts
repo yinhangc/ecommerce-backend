@@ -1,30 +1,48 @@
 import { Injectable } from '@nestjs/common';
-import { ProductStatus } from '@prisma/client';
-import { cloneDeep, find } from 'lodash';
+import { Prisma, ProductStatus } from '@prisma/client';
+import { find } from 'lodash';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { ProductDto } from './dto/product.dto';
+
+// #region - types defintion
+const listWithSkus = Prisma.validator<Prisma.ProductFindManyArgs>()({
+  include: {
+    skus: {
+      select: {
+        sku: true,
+        price: true,
+      },
+    },
+  },
+});
+type ListWithSkus = Prisma.ProductGetPayload<typeof listWithSkus>[];
+// #endregion
+
 @Injectable()
 export class ProductService {
   constructor(private prisma: PrismaService) {}
 
   async create(productDto: ProductDto) {
-    await this.prisma.product.deleteMany({});
-    return this.prisma.$transaction(async (tx) => {
+    // await this.prisma.product.deleteMany({});
+    await this.prisma.$transaction(async (tx) => {
       await this._create(tx, productDto);
     });
   }
 
   private async _create(tx, productDto: ProductDto): Promise<void> {
     console.log('productDto', productDto);
-    const { name, description, status, images, options, variants } = productDto;
+    const { name, description, status, imageUrls, options, variants } =
+      productDto;
     const product = await tx.product.create({
       data: {
         name,
         description,
         status: ProductStatus[status],
-        // images: {
-        //   create: images,
-        // },
+        images: {
+          create: imageUrls.map((imageUrl) => ({
+            imageUrl,
+          })),
+        },
         options: {
           create: options.map((option) => {
             return {
@@ -82,12 +100,31 @@ export class ProductService {
     }
   }
 
-  async getById(productId: number) {
+  async list(
+    options: Prisma.ProductFindManyArgs,
+  ): Promise<{ rows: ListWithSkus; count: number }> {
+    const { skip = 0, take = 10, where = {}, orderBy } = options;
+    const criteria: Prisma.ProductFindManyArgs = {
+      skip,
+      take,
+      where,
+      include: listWithSkus.include,
+    };
+    if (orderBy) criteria.orderBy = orderBy;
+    const [products, count] = await this.prisma.$transaction([
+      this.prisma.product.findMany(criteria),
+      this.prisma.product.count({ where }),
+    ]);
+    return { rows: products as ListWithSkus, count };
+  }
+
+  async getById(productId: number): Promise<ProductDto> {
     const product = await this.prisma.product.findUnique({
       where: {
         id: productId,
       },
       include: {
+        images: true,
         options: {
           include: {
             values: true,
@@ -104,21 +141,28 @@ export class ProductService {
         },
       },
     });
-    const productDto: Partial<ProductDto> = cloneDeep(product);
-    productDto.variants = product.skus.map((sku) => {
-      const { sku: skuLabel, price, values } = sku;
-      return {
-        name: values.map((v) => v.value).join(' / '),
-        price: Number(price),
-        quantity: 0,
-        options: values.map((v) => ({
-          label: v.option.label,
-          value: v.value,
-        })),
-        sku: skuLabel,
-      };
-    });
-    console.log('productDto', JSON.stringify(productDto, null, 2));
+    if (!product) return null;
+    const { name, description, status, options, images, skus } = product;
+    const productDto: ProductDto = {
+      name,
+      description,
+      status,
+      options,
+      imageUrls: images.map((im) => im.imageUrl),
+      variants: skus.map((sku) => {
+        const { sku: skuLabel, price, values } = sku;
+        return {
+          name: values.map((v) => v.value).join(' / '),
+          price: Number(price),
+          quantity: 0,
+          options: values.map((v) => ({
+            label: v.option.label,
+            value: v.value,
+          })),
+          sku: skuLabel,
+        };
+      }),
+    };
     return productDto;
   }
 }

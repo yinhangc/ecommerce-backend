@@ -13,7 +13,7 @@ export class ProductDto {
   status: ProductStatus;
 
   @IsArray()
-  images: string[];
+  imageUrls: string[];
 
   @ValidateNested({ each: true })
   @Type(() => ProductOptionDto)
