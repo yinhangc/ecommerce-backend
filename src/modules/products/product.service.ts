@@ -1,8 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma, ProductStatus } from '@prisma/client';
 import { find } from 'lodash';
-import { PrismaService } from 'src/prisma/prisma.service';
+import { PrismaService } from 'src/modules/prisma/prisma.service';
 import { ProductDto } from './dto/product.dto';
+import { ListDataDto } from 'src/shared/dto/listData.dto';
 
 // #region - types defintion
 const listWithSkus = Prisma.validator<Prisma.ProductFindManyArgs>()({
@@ -101,9 +102,10 @@ export class ProductService {
   }
 
   async list(
-    options: Prisma.ProductFindManyArgs,
+    query: ListDataDto,
   ): Promise<{ rows: ListWithSkus; count: number }> {
-    const { skip = 0, take = 10, where = {}, orderBy } = options;
+    const { skip = 0, take = 10, filter = {}, orderBy } = query;
+    const where = this.prisma.getWhere<'Product'>(filter);
     const criteria: Prisma.ProductFindManyArgs = {
       skip,
       take,

@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { ListDataDto } from 'src/shared/dto/listData.dto';
 import { ProductDto } from './dto/product.dto';
 import { ProductService } from './product.service';
-import { Prisma, Product } from '@prisma/client';
 
 @Controller('products')
 export class ProductController {
@@ -15,9 +15,9 @@ export class ProductController {
 
   @Post('/list')
   async list(
-    @Body() options: Prisma.ProductFindManyArgs,
+    @Body() query: ListDataDto,
   ): Promise<{ rows: any; count: number }> {
-    return await this.productService.list(options);
+    return await this.productService.list(query);
   }
 
   @Get(':id')
