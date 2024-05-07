@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma, PrismaClient } from '@prisma/client';
+import { unflatten } from 'safe-flat';
 import { ListDataDto } from 'src/shared/dto/listData.dto';
-
 // https://github.com/prisma/prisma/issues/6980
 // #region - types
 type ModelName = Prisma.ModelName;
@@ -17,13 +17,26 @@ type WhereInput<N extends ModelName = ModelName> = NonNullable<
 @Injectable()
 export class PrismaService extends PrismaClient {
   getWhere<T extends ModelName>(filter: ListDataDto['filter']): WhereInput<T> {
-    console.log('getWhere', filter);
-    const where = {};
+    let where = {};
     for (const [key, value] of Object.entries(filter)) {
-      const isLike = key.search('LIKE_');
-      const isEqual = key.search('EQUAL_');
-      const isIn = key.search('IN_');
+      if (key.includes('LIKE_')) {
+        where = {
+          ...where,
+          ...unflatten({ [`${key.replace('LIKE_', '')}.contains`]: value }),
+        };
+      } else if (key.includes('EQUAL_')) {
+        where = {
+          ...where,
+          ...unflatten({ [`${key.replace('EQUAL_', '')}.equals`]: value }),
+        };
+      } else if (key.includes('IN_')) {
+        where = {
+          ...where,
+          ...unflatten({ [`${key.replace('IN_', '')}.has`]: value }),
+        };
+      }
     }
+    console.log('getWhere WHERE', where);
     return where;
   }
 }
