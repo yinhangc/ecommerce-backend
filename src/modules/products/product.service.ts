@@ -104,15 +104,15 @@ export class ProductService {
   async list(
     query: ListDataDto,
   ): Promise<{ rows: ListWithSkus; count: number }> {
-    const { skip = 0, take = 10, filter = {}, orderBy } = query;
+    const { skip = 0, take = 10, filter = {}, orderBy = {} } = query;
     const where = this.prisma.getWhere<'Product'>(filter);
     const criteria: Prisma.ProductFindManyArgs = {
       skip,
       take,
       where,
       include: listWithSkus.include,
+      orderBy,
     };
-    if (orderBy) criteria.orderBy = orderBy;
     const [products, count] = await this.prisma.$transaction([
       this.prisma.product.findMany(criteria),
       this.prisma.product.count({ where }),

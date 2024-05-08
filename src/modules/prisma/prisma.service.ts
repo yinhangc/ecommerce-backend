@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma, PrismaClient } from '@prisma/client';
-import { contains } from 'class-validator';
 import { unflatten } from 'safe-flat';
 import { ListDataDto } from 'src/shared/dto/listData.dto';
 // https://github.com/prisma/prisma/issues/6980
@@ -23,7 +22,10 @@ export class PrismaService extends PrismaClient {
       if (key.includes('LIKE_')) {
         where = {
           ...where,
-          ...unflatten({ [`${key.replace('LIKE_', '')}.contains`]: value }),
+          ...unflatten({
+            [`${key.replace('LIKE_', '')}.contains`]: value,
+            [`${key.replace('LIKE_', '')}.mode`]: 'insensitive',
+          }),
         };
       } else if (key.includes('EQUAL_')) {
         where = {
@@ -37,6 +39,7 @@ export class PrismaService extends PrismaClient {
           ...where,
           ...unflatten({
             [`${arrayField}.some.${nestedField}.contains`]: value,
+            [`${arrayField}.some.${nestedField}.mode`]: 'insensitive',
           }),
         };
       }
