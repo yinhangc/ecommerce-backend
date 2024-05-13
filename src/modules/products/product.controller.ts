@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Put } from '@nestjs/common';
 import { ListDataDto } from 'src/shared/dto/listData.dto';
 import { ProductDto } from './dto/product.dto';
 import { ProductService } from './product.service';
@@ -23,5 +23,13 @@ export class ProductController {
   @Get(':id')
   async getById(@Param('id') id: string): Promise<ProductDto> {
     return await this.productService.getById(Number(id));
+  }
+
+  @Put(':id')
+  async update(
+    @Param('id') id: string,
+    @Body() productDto: ProductDto,
+  ): Promise<string> {
+    return await this.productService.updateById(Number(id), productDto);
   }
 }

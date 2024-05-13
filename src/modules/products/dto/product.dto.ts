@@ -5,6 +5,8 @@ import { ProductOptionDto } from './productOption.dto';
 import { ProductVariantDto } from './productVariant.dto';
 
 export class ProductDto {
+  id?: number;
+
   name: string;
 
   description: string;

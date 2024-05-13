@@ -34,7 +34,7 @@ model ProductImage {
   id        Int     @id @default(autoincrement())
   imageUrl  String
   productId Int
-  product   Product @relation(fields: [productId], references: [id])
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 }
 
 model ProductOption {
@@ -45,6 +45,7 @@ model ProductOption {
   values    ProductOptionValue[]
 }
 
+// TODO: Delete related row when product is deleted
 model ProductOptionValue {
   id       Int           @id @default(autoincrement())
   value    String
