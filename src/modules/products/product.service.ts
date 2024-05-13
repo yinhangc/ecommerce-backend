@@ -26,7 +26,7 @@ export class ProductService {
   async create(productDto: ProductDto) {
     // await this.prisma.product.deleteMany({});
     await this.prisma.$transaction(async (tx) => {
-      await this._upsert(tx, productDto);
+      await this._upsert(tx, null, productDto);
     });
   }
 
@@ -75,6 +75,7 @@ export class ProductService {
     if (!product) return null;
     const { name, description, status, options, images, skus } = product;
     const productDto: ProductDto = {
+      id,
       name,
       description,
       status,
@@ -100,67 +101,64 @@ export class ProductService {
 
   async updateById(id: number, productDto: ProductDto): Promise<string> {
     await this.prisma.$transaction(async (tx) => {
-      await this._upsert(tx, productDto);
+      await this._upsert(tx, id, productDto);
     });
     return 'SUCCESS';
   }
 
-  private async _upsert(tx, productDto: ProductDto): Promise<void> {
-    const { id, name, description, status, imageUrls, options, variants } =
+  private async _upsert(tx, id: number, productDto: ProductDto): Promise<void> {
+    console.log('PRODUCT DTO', productDto);
+    const { name, description, status, imageUrls, options, variants } =
       productDto;
     const product = await tx.product.upsert({
-      where: { id },
+      where: { id: id || 0 },
       create: {
-        data: {
-          name,
-          description,
-          status: ProductStatus[status],
-          images: {
-            create: imageUrls.map((imageUrl) => ({
-              imageUrl,
-            })),
-          },
-          options: {
-            create: options.map((option) => {
-              return {
-                label: option.label,
-                values: {
-                  create: option.values.map((v) => ({
-                    value: v.value,
-                  })),
-                },
-              };
-            }),
-          },
+        name,
+        description,
+        status: ProductStatus[status],
+        images: {
+          create: imageUrls.map((imageUrl) => ({
+            imageUrl,
+          })),
+        },
+        options: {
+          create: options.map((option) => {
+            return {
+              label: option.label,
+              values: {
+                create: option.values.map((v) => ({
+                  value: v.value,
+                })),
+              },
+            };
+          }),
         },
       },
       update: {
-        data: {
-          name,
-          description,
-          status: ProductStatus[status],
-          images: {
-            deleteMany: {},
-            create: imageUrls.map((imageUrl) => ({
-              imageUrl,
-            })),
-          },
-          options: {
-            deleteMany: {},
-            create: options.map((option) => {
-              return {
-                label: option.label,
-                values: {
-                  create: option.values.map((v) => ({
-                    value: v.value,
-                  })),
-                },
-              };
-            }),
-          },
-          skus: {
-            deleteMany: {},
-          },
+        name,
+        description,
+        status: ProductStatus[status],
+        images: {
+          deleteMany: {},
+          create: imageUrls.map((imageUrl) => ({
+            imageUrl,
+          })),
+        },
+        options: {
+          deleteMany: {},
+          create: options.map((option) => {
+            return {
+              label: option.label,
+              values: {
+                create: option.values.map((v) => ({
+                  value: v.value,
+                })),
+              },
+            };
+          }),
+        },
+        skus: {
+          deleteMany: {},
         },
       },
       include: {
@@ -206,74 +204,3 @@ export class ProductService {
     }
   }
 }
-
-// private async _create(tx, productDto: ProductDto): Promise<void> {
-//   console.log('productDto', productDto);
-//   const { name, description, status, imageUrls, options, variants } =
-//     productDto;
-//   const product = await tx.product.create({
-//     data: {
-//       name,
-//       description,
-//       status: ProductStatus[status],
-//       images: {
-//         create: imageUrls.map((imageUrl) => ({
-//           imageUrl,
-//         })),
-//       },
-//       options: {
-//         create: options.map((option) => {
-//           return {
-//             label: option.label,
-//             values: {
-//               create: option.values.map((v) => ({
-//                 value: v.value,
-//               })),
-//             },
-//           };
-//         }),
-//       },
-//     },
-//     include: {
-//       options: {
-//         include: {
-//           values: true,
-//         },
-//       },
-//     },
-//   });
-//   console.log('prisma product', JSON.stringify(product, null, 2));
-//   for (const variant of variants) {
-//     const { price, sku, options: variantOptions } = variant;
-//     const productOptionValues = [];
-//     let generatedSku = `${product.id.toString()}`;
-//     for (const variantOption of variantOptions) {
-//       const productOption = find(product.options, {
-//         label: variantOption.label,
-//       });
-//       const productOptionValueId = find(productOption.values, {
-//         value: variantOption.value,
-//       }).id;
-//       productOptionValues.push({ id: productOptionValueId });
-//       if (!sku)
-//         generatedSku +=
-//           productOption.id.toString() + productOptionValueId.toString();
-//     }
-//     const productSku = await tx.productSku.create({
-//       data: {
-//         sku: sku || generatedSku,
-//         price,
-//         product: {
-//           connect: { id: product.id },
-//         },
-//         values: {
-//           connect: productOptionValues,
-//         },
-//       },
-//       include: {
-//         values: true,
-//       },
-//     });
-//     console.log('prisma sku', JSON.stringify(productSku, null, 2));
-//   }
-// }
