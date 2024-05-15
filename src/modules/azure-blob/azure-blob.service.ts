@@ -1,5 +1,5 @@
 import { DefaultAzureCredential } from '@azure/identity';
-import { BlobServiceClient } from '@azure/storage-blob';
+import { BlobServiceClient, PublicAccessType } from '@azure/storage-blob';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { v4 as uuidv4 } from 'uuid';
@@ -35,5 +35,15 @@ export class AzureBlobService {
       fileUrls.push(blockBlobClient.url);
     }
     return fileUrls;
+  }
+
+  async updateContainerAccessPolicy(
+    containerName: string,
+    access: PublicAccessType,
+  ): Promise<void> {
+    const containerClient =
+      this.blobServiceClient.getContainerClient(containerName);
+    if (!(await containerClient.exists())) return null;
+    await containerClient.setAccessPolicy(access);
   }
 }
