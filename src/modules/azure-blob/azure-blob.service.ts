@@ -3,9 +3,11 @@ import { BlobServiceClient, PublicAccessType } from '@azure/storage-blob';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { v4 as uuidv4 } from 'uuid';
+import toTime from 'to-time';
 
 @Injectable()
 export class AzureBlobService {
+  private accountName: string;
   private blobServiceClient: BlobServiceClient;
 
   constructor(private configService: ConfigService) {
@@ -16,9 +18,14 @@ export class AzureBlobService {
     );
   }
 
-  async uploadFiles(files: Express.Multer.File[]): Promise<string[]> {
+  async uploadFiles(
+    files: Express.Multer.File[],
+    publicAccessType: PublicAccessType,
+  ): Promise<string[]> {
     const containerClient = this.blobServiceClient.getContainerClient('all');
-    if (!(await containerClient.exists())) await containerClient.create();
+    if (!(await containerClient.exists()))
+      await containerClient.create({ access: publicAccessType });
+    else await containerClient.setAccessPolicy(publicAccessType);
     const fileUrls = [];
     for (const file of files) {
       const extension = file.mimetype.split('/').pop();
@@ -37,13 +44,8 @@ export class AzureBlobService {
     return fileUrls;
   }
 
-  async updateContainerAccessPolicy(
-    containerName: string,
-    access: PublicAccessType,
-  ): Promise<void> {
-    const containerClient =
-      this.blobServiceClient.getContainerClient(containerName);
-    if (!(await containerClient.exists())) return null;
-    await containerClient.setAccessPolicy(access);
+  async createContainerSas(containerName: string) {
+    const now = new Date();
+    // const refreshTokenExpiry =
   }
 }

@@ -4,6 +4,7 @@ import { find } from 'lodash';
 import { PrismaService } from 'src/modules/prisma/prisma.service';
 import { ProductDto } from './dto/product.dto';
 import { ListDataDto } from 'src/shared/dto/listData.dto';
+import { AzureBlobService } from '../azure-blob/azure-blob.service';
 
 // #region - types defintion
 const listWithSkus = Prisma.validator<Prisma.ProductFindManyArgs>()({
@@ -21,7 +22,10 @@ type ListWithSkus = Prisma.ProductGetPayload<typeof listWithSkus>[];
 
 @Injectable()
 export class ProductService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private azureBlobService: AzureBlobService,
+  ) {}
 
   async create(productDto: ProductDto) {
     // await this.prisma.product.deleteMany({});
@@ -106,9 +110,18 @@ export class ProductService {
     return 'SUCCESS';
   }
 
-  private async _upsert(tx, id: number, productDto: ProductDto): Promise<void> {
-    console.log('PRODUCT DTO', productDto);
-    const { name, description, status, imageUrls, options, variants } =
+  async uploadFiles(id: number, files: Express.Multer.File[]): Promise<void> {
+    const product = await this.getById(id);
+    if (!product) return;
+    const status = product.status;
+    await this.azureBlobService.uploadFiles(
+      files,
+      status === ProductStatus.ACTIVE ? 'blob' : null,
+    );
+  }
+
+  private async _upsert(tx, productDto: ProductDto): Promise<void> {
+    const { id, name, description, status, imageUrls, options, variants } =
       productDto;
     const product = await tx.product.upsert({
       where: { id: id || 0 },

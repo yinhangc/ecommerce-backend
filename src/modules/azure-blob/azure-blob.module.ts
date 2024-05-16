@@ -5,6 +5,7 @@ import { ConfigModule } from '@nestjs/config';
 
 @Module({
   imports: [ConfigModule],
+  exports: [AzureBlobService],
   providers: [AzureBlobService],
   controllers: [AzureBlobController],
 })

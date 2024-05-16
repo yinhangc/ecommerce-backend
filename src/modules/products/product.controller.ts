@@ -1,7 +1,17 @@
-import { Body, Controller, Get, Param, Post, Put } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Put,
+  UploadedFiles,
+  UseInterceptors,
+} from '@nestjs/common';
 import { ListDataDto } from 'src/shared/dto/listData.dto';
 import { ProductDto } from './dto/product.dto';
 import { ProductService } from './product.service';
+import { AnyFilesInterceptor } from '@nestjs/platform-express';
 
 @Controller('products')
 export class ProductController {
@@ -26,10 +36,19 @@ export class ProductController {
   }
 
   @Put(':id')
-  async update(
+  async updateById(
     @Param('id') id: string,
     @Body() productDto: ProductDto,
   ): Promise<string> {
     return await this.productService.updateById(Number(id), productDto);
+  }
+
+  @Post('/upload/:id')
+  @UseInterceptors(AnyFilesInterceptor())
+  async uploadFiles(
+    @Param('id') id: string,
+    @UploadedFiles() files: Express.Multer.File[],
+  ): Promise<void> {
+    return await this.productService.uploadFiles(Number(id), files);
   }
 }
