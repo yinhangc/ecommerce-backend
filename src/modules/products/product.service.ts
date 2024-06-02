@@ -1,12 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma, ProductStatus } from '@prisma/client';
-import { find } from 'lodash';
+import { Prisma, ProductImage, ProductStatus } from '@prisma/client';
+import { find, difference } from 'lodash';
 import { PrismaService } from 'src/modules/prisma/prisma.service';
 import { ProductDto } from './dto/product.dto';
-import { ListDataDto } from 'src/shared/dto/listData.dto';
+import { ListDataDto } from 'src/shared/dto/list-data.dto';
 import { AzureBlobService } from '../azure-blob/azure-blob.service';
 
-// #region - types defintion
+// #region - type defintions
 const listWithSkus = Prisma.validator<Prisma.ProductFindManyArgs>()({
   include: {
     skus: {
@@ -27,11 +27,12 @@ export class ProductService {
     private azureBlobService: AzureBlobService,
   ) {}
 
-  async create(productDto: ProductDto) {
+  async create(productDto: ProductDto): Promise<ProductDto> {
     // await this.prisma.product.deleteMany({});
-    await this.prisma.$transaction(async (tx) => {
-      await this._upsert(tx, null, productDto);
+    const productId = await this.prisma.$transaction(async (tx) => {
+      return await this._upsertWithTransaction(tx, productDto);
     });
+    return await this.getById(productId);
   }
 
   async list(
@@ -43,8 +44,8 @@ export class ProductService {
       skip,
       take,
       where,
-      include: listWithSkus.include,
       orderBy,
+      include: listWithSkus.include,
     };
     const [products, count] = await this.prisma.$transaction([
       this.prisma.product.findMany(criteria),
@@ -84,7 +85,8 @@ export class ProductService {
       description,
       status,
       options,
-      imageUrls: images.map((im) => im.imageUrl),
+      images: [],
+      imageUrls: images.map((im) => im.url),
       variants: skus.map((sku) => {
         const { id, sku: skuLabel, price, values } = sku;
         return {
@@ -103,37 +105,34 @@ export class ProductService {
     return productDto;
   }
 
-  async updateById(id: number, productDto: ProductDto): Promise<string> {
+  async updateById(id: number, productDto: ProductDto): Promise<ProductDto> {
     await this.prisma.$transaction(async (tx) => {
-      await this._upsert(tx, id, productDto);
+      return await this._upsertWithTransaction(tx, productDto);
     });
-    return 'SUCCESS';
+    return await this.getById(id);
   }
 
-  async uploadFiles(id: number, files: Express.Multer.File[]): Promise<void> {
-    const product = await this.getById(id);
-    if (!product) return;
-    const status = product.status;
-    await this.azureBlobService.uploadFiles(
-      files,
-      status === ProductStatus.ACTIVE ? 'blob' : null,
-    );
-  }
-
-  private async _upsert(tx, productDto: ProductDto): Promise<void> {
-    const { id, name, description, status, imageUrls, options, variants } =
-      productDto;
+  private async _upsertWithTransaction(
+    tx,
+    productDto: ProductDto,
+  ): Promise<number> {
+    const {
+      id,
+      name,
+      description,
+      status,
+      images,
+      imageUrls,
+      options,
+      variants,
+    } = productDto;
+    // upsert product without images and skus
     const product = await tx.product.upsert({
       where: { id: id || 0 },
       create: {
         name,
         description,
         status: ProductStatus[status],
-        images: {
-          create: imageUrls.map((imageUrl) => ({
-            imageUrl,
-          })),
-        },
         options: {
           create: options.map((option) => {
             return {
@@ -151,12 +150,6 @@ export class ProductService {
         name,
         description,
         status: ProductStatus[status],
-        images: {
-          deleteMany: {},
-          create: imageUrls.map((imageUrl) => ({
-            imageUrl,
-          })),
-        },
         options: {
           deleteMany: {},
           create: options.map((option) => {
@@ -180,8 +173,10 @@ export class ProductService {
             values: true,
           },
         },
+        images: true,
       },
     });
+    // as product id is needed for generated sku, create product skus only after product is upserted
     for (const variant of variants) {
       const { price, sku, options: variantOptions } = variant;
       const productOptionValues = [];
@@ -198,7 +193,7 @@ export class ProductService {
           generatedSku +=
             productOption.id.toString() + productOptionValueId.toString();
       }
-      const productSku = await tx.productSku.create({
+      await tx.productSku.create({
         data: {
           sku: sku || generatedSku,
           price,
@@ -213,7 +208,55 @@ export class ProductService {
           values: true,
         },
       });
-      console.log('prisma sku', JSON.stringify(productSku, null, 2));
     }
+    // update image
+    await this._updateImagesWithTransaction(
+      tx,
+      product.id,
+      product.status,
+      images,
+      product.images,
+      imageUrls,
+    );
+    return product.id;
+  }
+
+  private async _updateImagesWithTransaction(
+    tx,
+    productId: number,
+    productStatus: ProductStatus,
+    images: Express.Multer.File[],
+    existingImages: ProductImage[],
+    updatedImageUrls: string[],
+  ): Promise<void> {
+    const containerName = 'product' + productId.toString();
+    console.log('containerName', containerName);
+    // delete removed files from azure blob
+    const existingImageUrls = existingImages.map((im) => im.url);
+    const removedImageUrls = difference(existingImageUrls, updatedImageUrls);
+    const removedImages = existingImages.filter((im) =>
+      removedImageUrls.includes(im.url),
+    );
+    await this.azureBlobService.deleteFiles(
+      containerName,
+      removedImages.map((im) => im.blobName),
+    );
+    // upload non-existing images to azure blob
+    const uploadFilesRes = await this.azureBlobService.uploadFiles(
+      images,
+      containerName,
+      productStatus === ProductStatus.INACTIVE ? 'blob' : null,
+    );
+    // update db
+    await tx.product.update({
+      where: { id: productId },
+      data: {
+        images: {
+          deleteMany: { url: { in: removedImageUrls } },
+          createMany: { data: uploadFilesRes },
+        },
+      },
+      include: { images: true },
+    });
   }
 }

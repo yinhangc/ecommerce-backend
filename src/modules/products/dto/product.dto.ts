@@ -15,6 +15,9 @@ export class ProductDto {
   status: ProductStatus;
 
   @IsArray()
+  images: Express.Multer.File[];
+
+  @IsArray()
   imageUrls: string[];
 
   @ValidateNested({ each: true })

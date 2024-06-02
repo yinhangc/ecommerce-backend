@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma, PrismaClient } from '@prisma/client';
 import { unflatten } from 'safe-flat';
-import { ListDataDto } from 'src/shared/dto/listData.dto';
+import { ListDataDto } from 'src/shared/dto/list-data.dto';
 // https://github.com/prisma/prisma/issues/6980
 // #region - types
 type ModelName = Prisma.ModelName;
