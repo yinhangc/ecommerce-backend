@@ -41,13 +41,16 @@ export class ProductController {
     return await this.productService.getById(Number(id));
   }
 
-  @Put(':id')
+  @Put('/:id')
+  @UseInterceptors(AnyFilesInterceptor())
   async updateById(
     @Param('id') id: string,
     @Body(new ParseFormDataPipe(), new ValidationPipe()) dto: ProductDto,
     @UploadedFiles() images: Express.Multer.File[],
   ): Promise<ProductDto> {
-    dto.images = images;
+    dto.images = dto.images.filter((im) => typeof im === 'string');
+    dto.images.push(...images);
+    console.log('dto.images', dto.images);
     return await this.productService.updateById(Number(id), dto);
   }
 }

@@ -15,10 +15,10 @@ export class ProductDto {
   status: ProductStatus;
 
   @IsArray()
-  images: Express.Multer.File[];
+  images: (string | Express.Multer.File)[];
 
-  @IsArray()
-  imageUrls: string[];
+  // @IsArray()
+  // imageUrls: string[];
 
   @ValidateNested({ each: true })
   @Type(() => ProductOptionDto)

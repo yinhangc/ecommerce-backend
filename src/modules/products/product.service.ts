@@ -79,19 +79,29 @@ export class ProductService {
     });
     if (!product) return null;
     const { name, description, status, options, images, skus } = product;
+    let sasToken: string;
+    if (images.length > 0) {
+      sasToken = await this.azureBlobService.createContainerSas(
+        this.getContainerName(id),
+      );
+    }
     const productDto: ProductDto = {
       id,
       name,
       description,
       status,
       options,
-      images: [],
-      imageUrls: images.map((im) => im.url),
+      images: images.map((im) => `${im.url}?${sasToken}`),
       variants: skus.map((sku) => {
         const { id, sku: skuLabel, price, values } = sku;
+        console.log('values', values);
         return {
           id,
-          name: values.map((v) => v.value).join(' / '),
+          name:
+            values.length > 0
+              ? values.map((v) => v.value).join(' / ')
+              : 'DEFAULT',
+          // TODO: Investigate why is string
           price: Number(price),
           quantity: 0,
           options: values.map((v) => ({
@@ -116,19 +126,12 @@ export class ProductService {
     tx,
     productDto: ProductDto,
   ): Promise<number> {
-    const {
-      id,
-      name,
-      description,
-      status,
-      images,
-      imageUrls,
-      options,
-      variants,
-    } = productDto;
+    const { id, name, description, status, images, options, variants } =
+      productDto;
     // upsert product without images and skus
     const product = await tx.product.upsert({
-      where: { id: id || 0 },
+      // TODO: fix this
+      where: { id: Number(id) || 0 },
       create: {
         name,
         description,
@@ -216,7 +219,6 @@ export class ProductService {
       product.status,
       images,
       product.images,
-      imageUrls,
     );
     return product.id;
   }
@@ -225,28 +227,39 @@ export class ProductService {
     tx,
     productId: number,
     productStatus: ProductStatus,
-    images: Express.Multer.File[],
+    images: (string | Express.Multer.File)[],
     existingImages: ProductImage[],
-    updatedImageUrls: string[],
   ): Promise<void> {
-    const containerName = 'product' + productId.toString();
-    console.log('containerName', containerName);
+    const containerName = this.getContainerName(productId);
+    const imageBlobs = images.filter(
+      (im) => typeof im !== 'string',
+    ) as Express.Multer.File[];
+    let updatedImageUrls = images.filter(
+      (im) => typeof im === 'string',
+    ) as string[];
+    // remove sas token from url if any
+    updatedImageUrls = updatedImageUrls.map((im) => im.split('?sv=')[0]);
     // delete removed files from azure blob
     const existingImageUrls = existingImages.map((im) => im.url);
     const removedImageUrls = difference(existingImageUrls, updatedImageUrls);
-    const removedImages = existingImages.filter((im) =>
-      removedImageUrls.includes(im.url),
-    );
-    await this.azureBlobService.deleteFiles(
-      containerName,
-      removedImages.map((im) => im.blobName),
-    );
+    if (removedImageUrls.length > 0) {
+      const removedImages = existingImages.filter((im) =>
+        removedImageUrls.includes(im.url),
+      );
+      await this.azureBlobService.deleteFiles(
+        containerName,
+        removedImages.map((im) => im.blobName),
+      );
+    }
     // upload non-existing images to azure blob
-    const uploadFilesRes = await this.azureBlobService.uploadFiles(
-      images,
-      containerName,
-      productStatus === ProductStatus.INACTIVE ? 'blob' : null,
-    );
+    const uploadFilesRes =
+      imageBlobs.length > 0
+        ? await this.azureBlobService.uploadFiles(
+            imageBlobs,
+            containerName,
+            productStatus === ProductStatus.INACTIVE ? 'blob' : null,
+          )
+        : [];
     // update db
     await tx.product.update({
       where: { id: productId },
@@ -258,5 +271,9 @@ export class ProductService {
       },
       include: { images: true },
     });
+  }
+
+  private getContainerName(productId: number) {
+    return 'product' + productId.toString();
   }
 }

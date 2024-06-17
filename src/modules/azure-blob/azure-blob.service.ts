@@ -1,18 +1,27 @@
 import { DefaultAzureCredential } from '@azure/identity';
-import { BlobServiceClient, PublicAccessType } from '@azure/storage-blob';
+import {
+  BlobClient,
+  BlobServiceClient,
+  ContainerSASPermissions,
+  PublicAccessType,
+  SASProtocol,
+  generateBlobSASQueryParameters,
+} from '@azure/storage-blob';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import * as moment from 'moment';
 import { v4 as uuidv4 } from 'uuid';
 import { IAzureBlobUploadFileResponse } from './interfaces/azure-blob-upload-files.interface';
 
 @Injectable()
 export class AzureBlobService {
+  private accountName: string;
   private blobServiceClient: BlobServiceClient;
 
   constructor(private configService: ConfigService) {
-    const accountName = this.configService.get('AZURE_STORAGE_ACCOUNT_NAME');
+    this.accountName = this.configService.get('AZURE_STORAGE_ACCOUNT_NAME');
     this.blobServiceClient = new BlobServiceClient(
-      `https://${accountName}.blob.core.windows.net`,
+      `https://${this.accountName}.blob.core.windows.net`,
       new DefaultAzureCredential(),
     );
   }
@@ -22,14 +31,24 @@ export class AzureBlobService {
     containerName: string,
     publicAccessType: PublicAccessType,
   ): Promise<IAzureBlobUploadFileResponse[]> {
+    if (files.length === 0) return [];
     const containerClient =
       this.blobServiceClient.getContainerClient(containerName);
+
+    // create container if not exist yet
     if (!(await containerClient.exists()))
       await containerClient.create({ access: publicAccessType });
-    else await containerClient.setAccessPolicy(publicAccessType);
+
+    // modify current access type if necessary
+    const existingPublicAccessType = (await containerClient.getAccessPolicy())
+      .blobPublicAccess;
+    if (existingPublicAccessType !== publicAccessType)
+      await containerClient.setAccessPolicy(publicAccessType);
+
+    // uplaod files
     const fileUrls: IAzureBlobUploadFileResponse[] = [];
     for (const file of files) {
-      console.log('file', file);
+      console.log('file', typeof file);
       const extension = file.mimetype.split('/').pop();
       const blobName = uuidv4() + `.${extension}`;
       const blockBlobClient = containerClient.getBlockBlobClient(blobName);
@@ -56,12 +75,36 @@ export class AzureBlobService {
       this.blobServiceClient.getContainerClient(containerName);
     if (!(await containerClient.exists())) return;
     for (const name of blobNames) {
-      await containerClient.deleteBlob(name);
+      // TODO: delete if exists
+      try {
+        await containerClient.deleteBlob(name);
+      } catch (e) {
+        continue;
+      }
     }
   }
 
   async createContainerSas(containerName: string) {
-    const now = new Date();
-    // const refreshTokenExpiry =
+    const startsOn = moment().subtract(1, 'hours').toDate();
+    const expiresOn = moment().add(1, 'days').toDate();
+    const userDelegationKey = await this.blobServiceClient.getUserDelegationKey(
+      startsOn,
+      expiresOn,
+    );
+    // https://learn.microsoft.com/en-us/rest/api/storageservices/create-user-delegation-sas
+    const permissions = 'rcd';
+    const sasOptions = {
+      containerName,
+      permissions: ContainerSASPermissions.parse(permissions),
+      protocol: SASProtocol.HttpsAndHttp,
+      startsOn,
+      expiresOn,
+    };
+    const sasToken = generateBlobSASQueryParameters(
+      sasOptions,
+      userDelegationKey,
+      this.accountName,
+    ).toString();
+    return sasToken;
   }
 }
