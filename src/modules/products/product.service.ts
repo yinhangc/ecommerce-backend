@@ -78,6 +78,7 @@ export class ProductService {
       },
     });
     if (!product) return null;
+    console.log('product', product);
     const { name, description, status, options, images, skus } = product;
     let sasToken: string;
     if (images.length > 0) {

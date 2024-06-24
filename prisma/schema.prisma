@@ -64,3 +64,12 @@ model ProductSku {
   product   Product              @relation(fields: [productId], references: [id], onDelete: Cascade)
   values    ProductOptionValue[]
 }
+
+model ProductCategory {
+  id       Int               @id @default(autoincrement())
+  name     String
+  slug     String
+  parentId Int?
+  parent   ProductCategory?  @relation("SubCategories", fields: [parentId], references: [id])
+  children ProductCategory[] @relation("SubCategories")
+}

@@ -1,8 +1,49 @@
 import { ProductStatus } from '@prisma/client';
 import { Type } from 'class-transformer';
-import { IsArray, IsEnum, ValidateNested } from 'class-validator';
-import { ProductOptionDto } from './productOption.dto';
-import { ProductVariantDto } from './productVariant.dto';
+import {
+  IsArray,
+  IsEnum,
+  IsOptional,
+  Max,
+  Min,
+  ValidateNested,
+} from 'class-validator';
+
+class ProductOptionValueDto {
+  value: string;
+}
+
+class ProductOptionDto {
+  label: string;
+
+  @ValidateNested({ each: true })
+  @Type(() => ProductOptionValueDto)
+  values: ProductOptionValueDto[];
+}
+
+class ProductVariantOptionDto {
+  label: string;
+  value: string;
+}
+
+class ProductVariantDto {
+  name: string;
+
+  @Min(1)
+  @Max(9999)
+  price: number;
+
+  @Min(0)
+  @Max(9999)
+  quantity: number;
+
+  @ValidateNested({ each: true })
+  @Type(() => ProductVariantOptionDto)
+  options: ProductVariantOptionDto[];
+
+  @IsOptional()
+  sku: string;
+}
 
 export class ProductDto {
   id?: number;
@@ -16,9 +57,6 @@ export class ProductDto {
 
   @IsArray()
   images: (string | Express.Multer.File)[];
-
-  // @IsArray()
-  // imageUrls: string[];
 
   @ValidateNested({ each: true })
   @Type(() => ProductOptionDto)
