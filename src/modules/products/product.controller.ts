@@ -50,7 +50,6 @@ export class ProductController {
   ): Promise<ProductDto> {
     dto.images = dto.images.filter((im) => typeof im === 'string');
     dto.images.push(...images);
-    console.log('dto.images', dto.images);
     return await this.productService.updateById(Number(id), dto);
   }
 }

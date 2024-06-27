@@ -5,10 +5,12 @@ import { PrismaModule } from 'src/modules/prisma/prisma.module';
 import { AzureBlobService } from '../azure-blob/azure-blob.service';
 import { ConfigModule } from '@nestjs/config';
 import { AzureBlobModule } from '../azure-blob/azure-blob.module';
+import { ProductCategoryController } from './product-category.controller';
 
 @Module({
   imports: [ConfigModule, PrismaModule, AzureBlobModule],
   providers: [ProductService, AzureBlobService],
-  controllers: [ProductController],
+  controllers: [ProductController, ProductCategoryController],
+  exports: [ProductService],
 })
 export class ProductModule {}

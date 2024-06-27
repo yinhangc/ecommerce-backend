@@ -1,7 +1,7 @@
 ## Development
 
 ```bash
-# DB
+# Start DB
 $ docker compose --env-file .env.development up
 ```
 
@@ -10,4 +10,9 @@ $ docker compose --env-file .env.development up
 $ dotenv -e .env.development npx prisma migrate dev
 ```
 
-- Use IPv4 from ifconfig as host when connecting to pgadmin
+```bash
+# Reset DB
+$ dotenv -e .env.development npx prisma migrate reset 
+```
+
+- May need to use IPv4 from ifconfig as host when connecting to pgadmin

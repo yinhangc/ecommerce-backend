@@ -1,0 +1,51 @@
+{
+  "products": [
+    {
+      "name": "",
+      "description": "<p>description 1</p><p>description 2</p>",
+      "status": "INACTIVE",
+      "options": [
+        {
+          "label": "Size",
+          "values": [
+            { "value": "36" },
+            { "value": "36.5" },
+            { "value": "37" },
+            { "value": "37.5" }
+          ],
+          "isEditing": false
+        }
+      ],
+      "variants": [
+        {
+          "name": "36",
+          "price": 100,
+          "quantity": 100,
+          "options": [{ "label": "Size", "value": "36" }],
+          "sku": ""
+        },
+        {
+          "name": "36.5",
+          "price": 100,
+          "quantity": 100,
+          "options": [{ "label": "Size", "value": "36.5" }],
+          "sku": ""
+        },
+        {
+          "name": "37",
+          "price": 100,
+          "quantity": 100,
+          "options": [{ "label": "Size", "value": "37" }],
+          "sku": ""
+        },
+        {
+          "name": "37.5",
+          "price": 100,
+          "quantity": 100,
+          "options": [{ "label": "Size", "value": "37.5" }],
+          "sku": ""
+        }
+      ]
+    }
+  ]
+}

@@ -78,7 +78,6 @@ export class ProductService {
       },
     });
     if (!product) return null;
-    console.log('product', product);
     const { name, description, status, options, images, skus } = product;
     let sasToken: string;
     if (images.length > 0) {
@@ -95,7 +94,6 @@ export class ProductService {
       images: images.map((im) => `${im.url}?${sasToken}`),
       variants: skus.map((sku) => {
         const { id, sku: skuLabel, price, values } = sku;
-        console.log('values', values);
         return {
           id,
           name:
