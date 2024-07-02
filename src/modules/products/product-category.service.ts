@@ -14,18 +14,13 @@ export class ProductCategoryService {
     const data: Prisma.ProductCategoryCreateInput = {
       name,
       slug,
-      parent: {
+    };
+    if (parentCategoryId)
+      data.parent = {
         connect: {
           id: parentCategoryId,
         },
-      },
-    };
-    // if (parentCategoryId)
-    //   data.parent = {
-    //     connect: {
-    //       id: parentCategoryId,
-    //     },
-    //   };
+      };
     const category = await this.prisma.productCategory.create({
       data,
       include: {
@@ -39,6 +34,10 @@ export class ProductCategoryService {
       ...category,
       parentCategoryId: createdParentCategoryId,
     };
+  }
+
+  async list(): Promise<ProductCategoryDto[]> {
+    return await this.prisma.productCategory.findMany();
   }
 
   async getById(id: number): Promise<ProductCategoryDto> {

@@ -10,13 +10,18 @@ import {
 import { ProductCategoryService } from './product-category.service';
 import { ProductCategoryDto } from './dto/product-category.dto';
 
-@Controller('product-categories')
+@Controller('categories')
 export class ProductCategoryController {
   constructor(private productCategoryService: ProductCategoryService) {}
 
   @Post()
   async create(@Body() dto: ProductCategoryDto): Promise<ProductCategoryDto> {
     return await this.productCategoryService.create(dto);
+  }
+
+  @Get('/list')
+  async list(): Promise<ProductCategoryDto[]> {
+    return await this.productCategoryService.list();
   }
 
   @Get(':id')
