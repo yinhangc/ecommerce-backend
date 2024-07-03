@@ -1,24 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma, ProductImage, ProductStatus } from '@prisma/client';
-import { find, difference } from 'lodash';
+import { difference, find } from 'lodash';
 import { PrismaService } from 'src/modules/prisma/prisma.service';
-import { ProductDto } from './dto/product.dto';
 import { ListDataDto } from 'src/shared/dto/list-data.dto';
 import { AzureBlobService } from '../azure-blob/azure-blob.service';
-
-// #region - type defintions
-const listWithSkus = Prisma.validator<Prisma.ProductFindManyArgs>()({
-  include: {
-    skus: {
-      select: {
-        sku: true,
-        price: true,
-      },
-    },
-  },
-});
-type ListWithSkus = Prisma.ProductGetPayload<typeof listWithSkus>[];
-// #endregion
+import { ProductDto } from './dto/product.dto';
+import { ListWithSkus, listWithSkus } from './types';
 
 @Injectable()
 export class ProductService {

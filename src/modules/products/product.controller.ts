@@ -14,6 +14,7 @@ import { ProductDto } from './dto/product.dto';
 import { ProductService } from './product.service';
 import { AnyFilesInterceptor } from '@nestjs/platform-express';
 import { ParseFormDataPipe } from 'src/shared/pipes/parse-form-data.pipe';
+import { ListWithSkus } from './types';
 
 @Controller('products')
 export class ProductController {
@@ -32,7 +33,7 @@ export class ProductController {
   @Post('/list')
   async list(
     @Body() query: ListDataDto,
-  ): Promise<{ rows: any; count: number }> {
+  ): Promise<{ rows: ListWithSkus; count: number }> {
     return await this.productService.list(query);
   }
 

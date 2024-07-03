@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { ProductCategoryDto } from './dto/product-category.dto';
 import { PrismaService } from 'src/modules/prisma/prisma.service';
 import { Prisma } from '@prisma/client';
+import { ListDataDto } from 'src/shared/dto/list-data.dto';
+import { ListWithParent, listWithParent } from './types';
 
 @Injectable()
 export class ProductCategoryService {
@@ -36,7 +38,26 @@ export class ProductCategoryService {
     };
   }
 
-  async list(): Promise<ProductCategoryDto[]> {
+  async list(
+    query: ListDataDto,
+  ): Promise<{ rows: ListWithParent; count: number }> {
+    const { skip = 0, take = 10, filter = {}, orderBy = {} } = query;
+    const where = this.prisma.getWhere<'ProductCategory'>(filter);
+    const criteria: Prisma.ProductCategoryFindManyArgs = {
+      skip,
+      take,
+      where,
+      orderBy,
+      include: listWithParent.include,
+    };
+    const [categories, count] = await this.prisma.$transaction([
+      this.prisma.productCategory.findMany(criteria),
+      this.prisma.productCategory.count({ where }),
+    ]);
+    return { rows: categories as ListWithParent, count };
+  }
+
+  async getAllForDropdown(): Promise<ProductCategoryDto[]> {
     return await this.prisma.productCategory.findMany();
   }
 

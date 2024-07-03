@@ -7,8 +7,10 @@ import {
   Post,
   Put,
 } from '@nestjs/common';
-import { ProductCategoryService } from './product-category.service';
+import { ListDataDto } from 'src/shared/dto/list-data.dto';
 import { ProductCategoryDto } from './dto/product-category.dto';
+import { ProductCategoryService } from './product-category.service';
+import { ListWithParent } from './types';
 
 @Controller('categories')
 export class ProductCategoryController {
@@ -19,9 +21,16 @@ export class ProductCategoryController {
     return await this.productCategoryService.create(dto);
   }
 
-  @Get('/list')
-  async list(): Promise<ProductCategoryDto[]> {
-    return await this.productCategoryService.list();
+  @Post('/list')
+  async list(
+    @Body() query: ListDataDto,
+  ): Promise<{ rows: ListWithParent; count: number }> {
+    return await this.productCategoryService.list(query);
+  }
+
+  @Get('/all')
+  async getAllForDropdown() {
+    return await this.productCategoryService.getAllForDropdown();
   }
 
   @Get(':id')
