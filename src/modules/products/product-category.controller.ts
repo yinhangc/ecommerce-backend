@@ -38,7 +38,7 @@ export class ProductCategoryController {
     return await this.productCategoryService.getById(Number(id));
   }
 
-  @Put(':/id')
+  @Put(':id')
   async updateById(@Param('id') id: string, @Body() dto: ProductCategoryDto) {
     return await this.productCategoryService.update(Number(id), dto);
   }

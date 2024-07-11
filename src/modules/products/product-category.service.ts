@@ -12,15 +12,15 @@ export class ProductCategoryService {
   async create(
     productCategoryDto: ProductCategoryDto,
   ): Promise<ProductCategoryDto> {
-    const { name, slug, parentCategoryId } = productCategoryDto;
+    const { name, slug, parentId } = productCategoryDto;
     const data: Prisma.ProductCategoryCreateInput = {
       name,
       slug,
     };
-    if (parentCategoryId)
+    if (parentId)
       data.parent = {
         connect: {
-          id: parentCategoryId,
+          id: parentId,
         },
       };
     const category = await this.prisma.productCategory.create({
@@ -30,11 +30,11 @@ export class ProductCategoryService {
       },
     });
     console.log('create category', category);
-    const createdParentCategoryId = category.parent?.id || null;
+    const createdParentId = category.parent?.id || null;
     delete category.parent;
     return {
       ...category,
-      parentCategoryId: createdParentCategoryId,
+      parentId: createdParentId,
     };
   }
 
@@ -54,11 +54,19 @@ export class ProductCategoryService {
       this.prisma.productCategory.findMany(criteria),
       this.prisma.productCategory.count({ where }),
     ]);
+    console.log(categories);
     return { rows: categories as ListWithParent, count };
   }
 
   async getAllForDropdown(): Promise<ProductCategoryDto[]> {
-    return await this.prisma.productCategory.findMany();
+    const categories = await this.prisma.productCategory.findMany({
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+      },
+    });
+    return categories;
   }
 
   async getById(id: number): Promise<ProductCategoryDto> {
@@ -68,24 +76,25 @@ export class ProductCategoryService {
         parent: true,
       },
     });
-    const parentCategoryId = category.parent?.id || null;
+    const parentId = category.parent?.id || null;
     delete category.parent;
     return {
       ...category,
-      parentCategoryId,
+      parentId,
     };
   }
 
+  // TODO: update all children slug
   async update(
     id: number,
     productCategoryDto: ProductCategoryDto,
   ): Promise<ProductCategoryDto> {
-    const { name, slug, parentCategoryId } = productCategoryDto;
+    const { name, slug, parentId } = productCategoryDto;
     const data: Prisma.ProductCategoryUpdateInput = { name, slug };
-    if (parentCategoryId)
+    if (parentId)
       data.parent = {
         connect: {
-          id: parentCategoryId,
+          id: parentId,
         },
       };
     const category = await this.prisma.productCategory.update({
@@ -98,11 +107,11 @@ export class ProductCategoryService {
       },
     });
     console.log('update category', category);
-    const updatedParentCategoryId = category.parent?.id || null;
+    const updatedParentId = category.parent?.id || null;
     delete category.parent;
     return {
       ...category,
-      parentCategoryId: updatedParentCategoryId,
+      parentId: updatedParentId,
     };
   }
 

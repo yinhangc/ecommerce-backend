@@ -5,5 +5,5 @@ export class ProductCategoryDto {
 
   slug: string;
 
-  parentCategoryId?: number;
+  parentId?: number;
 }
