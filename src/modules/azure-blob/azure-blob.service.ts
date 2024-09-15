@@ -75,7 +75,6 @@ export class AzureBlobService {
       this.blobServiceClient.getContainerClient(containerName);
     if (!(await containerClient.exists())) return;
     for (const name of blobNames) {
-      // TODO: delete if exists
       try {
         await containerClient.deleteBlob(name);
       } catch (e) {

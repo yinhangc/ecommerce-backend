@@ -46,11 +46,15 @@ class ProductVariantDto {
 }
 
 export class ProductDto {
+  @Type(() => Number)
   id?: number;
 
   name: string;
 
   description: string;
+
+  @Type(() => Number)
+  categoryId: number;
 
   @IsEnum(ProductStatus)
   status: ProductStatus;

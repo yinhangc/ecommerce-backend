@@ -3,7 +3,7 @@ import { ProductCategoryDto } from './dto/product-category.dto';
 import { PrismaService } from 'src/modules/prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 import { ListDataDto } from 'src/shared/dto/list-data.dto';
-import { ListWithParent, listWithParent } from './types';
+import { TListCategoryWithParent, listCategoryWithParent } from './types';
 
 @Injectable()
 export class ProductCategoryService {
@@ -12,35 +12,36 @@ export class ProductCategoryService {
   async create(
     productCategoryDto: ProductCategoryDto,
   ): Promise<ProductCategoryDto> {
-    const { name, slug, parentId } = productCategoryDto;
-    const data: Prisma.ProductCategoryCreateInput = {
-      name,
-      slug,
-    };
-    if (parentId)
-      data.parent = {
-        connect: {
-          id: parentId,
-        },
+    return await this.prisma.$transaction(async (tx) => {
+      const { name, slug, parentId } = productCategoryDto;
+      const data: Prisma.ProductCategoryCreateInput = {
+        name,
+        slug,
       };
-    const category = await this.prisma.productCategory.create({
-      data,
-      include: {
-        parent: true,
-      },
+      if (parentId)
+        data.parent = {
+          connect: {
+            id: parentId,
+          },
+        };
+      const category = await tx.productCategory.create({
+        data,
+        include: {
+          parent: true,
+        },
+      });
+      const createdParentId = category.parent?.id || null;
+      delete category.parent;
+      return {
+        ...category,
+        parentId: createdParentId,
+      };
     });
-    console.log('create category', category);
-    const createdParentId = category.parent?.id || null;
-    delete category.parent;
-    return {
-      ...category,
-      parentId: createdParentId,
-    };
   }
 
   async list(
     query: ListDataDto,
-  ): Promise<{ rows: ListWithParent; count: number }> {
+  ): Promise<{ rows: TListCategoryWithParent; count: number }> {
     const { skip = 0, take = 10, filter = {}, orderBy = {} } = query;
     const where = this.prisma.getWhere<'ProductCategory'>(filter);
     const criteria: Prisma.ProductCategoryFindManyArgs = {
@@ -48,14 +49,13 @@ export class ProductCategoryService {
       take,
       where,
       orderBy,
-      include: listWithParent.include,
+      include: listCategoryWithParent.include,
     };
     const [categories, count] = await this.prisma.$transaction([
       this.prisma.productCategory.findMany(criteria),
       this.prisma.productCategory.count({ where }),
     ]);
-    console.log(categories);
-    return { rows: categories as ListWithParent, count };
+    return { rows: categories as TListCategoryWithParent, count };
   }
 
   async getAllForDropdown(): Promise<ProductCategoryDto[]> {
@@ -84,42 +84,57 @@ export class ProductCategoryService {
     };
   }
 
-  // TODO: update all children slug
   async update(
     id: number,
     productCategoryDto: ProductCategoryDto,
   ): Promise<ProductCategoryDto> {
-    const { name, slug, parentId } = productCategoryDto;
-    const data: Prisma.ProductCategoryUpdateInput = { name, slug };
-    if (parentId)
-      data.parent = {
-        connect: {
-          id: parentId,
+    return await this.prisma.$transaction(async (tx) => {
+      const { name, slug, parentId } = productCategoryDto;
+      const data: Prisma.ProductCategoryUpdateInput = { name, slug };
+      if (parentId)
+        data.parent = {
+          connect: {
+            id: parentId,
+          },
+        };
+      const category = await tx.productCategory.update({
+        where: {
+          id,
         },
+        data,
+        include: {
+          parent: true,
+          children: true,
+        },
+      });
+      console.log('update category', category);
+      // Update all children slug
+      if (category.children.length > 0) {
+        for (const child of category.children) {
+          await tx.productCategory.update({
+            where: { id: child.id },
+            data: {
+              slug: category.slug + '/' + child.slug.replace(/^\/[^\/]+\//, ''),
+            },
+          });
+        }
+      }
+      delete category.parent;
+      delete category.children;
+      return {
+        ...category,
+        parentId,
       };
-    const category = await this.prisma.productCategory.update({
-      where: {
-        id,
-      },
-      data,
-      include: {
-        parent: true,
-      },
     });
-    console.log('update category', category);
-    const updatedParentId = category.parent?.id || null;
-    delete category.parent;
-    return {
-      ...category,
-      parentId: updatedParentId,
-    };
   }
 
   async delete(id: number): Promise<void> {
-    await this.prisma.productCategory.delete({
-      where: {
-        id,
-      },
+    return await this.prisma.$transaction(async (tx) => {
+      await tx.productCategory.delete({
+        where: {
+          id,
+        },
+      });
     });
   }
 }

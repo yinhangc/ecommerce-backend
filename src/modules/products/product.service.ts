@@ -5,7 +5,7 @@ import { PrismaService } from 'src/modules/prisma/prisma.service';
 import { ListDataDto } from 'src/shared/dto/list-data.dto';
 import { AzureBlobService } from '../azure-blob/azure-blob.service';
 import { ProductDto } from './dto/product.dto';
-import { ListWithSkus, listWithSkus } from './types';
+import { TListProductWithSkus, listProductWithSkus } from './types';
 
 @Injectable()
 export class ProductService {
@@ -24,7 +24,7 @@ export class ProductService {
 
   async list(
     query: ListDataDto,
-  ): Promise<{ rows: ListWithSkus; count: number }> {
+  ): Promise<{ rows: TListProductWithSkus; count: number }> {
     const { skip = 0, take = 10, filter = {}, orderBy = {} } = query;
     const where = this.prisma.getWhere<'Product'>(filter);
     const criteria: Prisma.ProductFindManyArgs = {
@@ -32,13 +32,13 @@ export class ProductService {
       take,
       where,
       orderBy,
-      include: listWithSkus.include,
+      include: listProductWithSkus.include,
     };
     const [products, count] = await this.prisma.$transaction([
       this.prisma.product.findMany(criteria),
       this.prisma.product.count({ where }),
     ]);
-    return { rows: products as ListWithSkus, count };
+    return { rows: products as TListProductWithSkus, count };
   }
 
   async getById(id: number): Promise<ProductDto> {
@@ -47,6 +47,7 @@ export class ProductService {
         id,
       },
       include: {
+        category: true,
         images: true,
         options: {
           include: {
@@ -65,7 +66,8 @@ export class ProductService {
       },
     });
     if (!product) return null;
-    const { name, description, status, options, images, skus } = product;
+    const { name, description, category, status, options, images, skus } =
+      product;
     let sasToken: string;
     if (images.length > 0) {
       sasToken = await this.azureBlobService.createContainerSas(
@@ -76,6 +78,7 @@ export class ProductService {
       id,
       name,
       description,
+      categoryId: category?.id || null,
       status,
       options,
       images: images.map((im) => `${im.url}?${sasToken}`),
@@ -112,15 +115,25 @@ export class ProductService {
     tx,
     productDto: ProductDto,
   ): Promise<number> {
-    const { id, name, description, status, images, options, variants } =
-      productDto;
-    // upsert product without images and skus
+    const {
+      id,
+      name,
+      description,
+      categoryId,
+      status,
+      images,
+      options,
+      variants,
+    } = productDto;
+    // Upsert product without images and skus
     const product = await tx.product.upsert({
-      // TODO: fix this
-      where: { id: Number(id) || 0 },
+      where: { id: id || 0 },
       create: {
         name,
         description,
+        category: {
+          connect: { id: categoryId },
+        },
         status: ProductStatus[status],
         options: {
           create: options.map((option) => {
@@ -138,6 +151,9 @@ export class ProductService {
       update: {
         name,
         description,
+        category: {
+          connect: { id: categoryId },
+        },
         status: ProductStatus[status],
         options: {
           deleteMany: {},
@@ -165,7 +181,7 @@ export class ProductService {
         images: true,
       },
     });
-    // as product id is needed for generated sku, create product skus only after product is upserted
+    // As product id is needed for generated sku, create product skus only after product is upserted
     for (const variant of variants) {
       const { price, sku, options: variantOptions } = variant;
       const productOptionValues = [];
@@ -198,7 +214,7 @@ export class ProductService {
         },
       });
     }
-    // update image
+    // Update images
     await this._updateImagesWithTransaction(
       tx,
       product.id,
@@ -223,9 +239,9 @@ export class ProductService {
     let updatedImageUrls = images.filter(
       (im) => typeof im === 'string',
     ) as string[];
-    // remove sas token from url if any
+    // Remove sas token from url if any
     updatedImageUrls = updatedImageUrls.map((im) => im.split('?sv=')[0]);
-    // delete removed files from azure blob
+    // Delete removed files from azure blob
     const existingImageUrls = existingImages.map((im) => im.url);
     const removedImageUrls = difference(existingImageUrls, updatedImageUrls);
     if (removedImageUrls.length > 0) {
@@ -237,7 +253,7 @@ export class ProductService {
         removedImages.map((im) => im.blobName),
       );
     }
-    // upload non-existing images to azure blob
+    // Upload non-existing images to azure blob
     const uploadFilesRes =
       imageBlobs.length > 0
         ? await this.azureBlobService.uploadFiles(
@@ -246,7 +262,7 @@ export class ProductService {
             productStatus === ProductStatus.INACTIVE ? 'blob' : null,
           )
         : [];
-    // update db
+    // Update db
     await tx.product.update({
       where: { id: productId },
       data: {

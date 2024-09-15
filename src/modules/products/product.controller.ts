@@ -14,7 +14,7 @@ import { ProductDto } from './dto/product.dto';
 import { ProductService } from './product.service';
 import { AnyFilesInterceptor } from '@nestjs/platform-express';
 import { ParseFormDataPipe } from 'src/shared/pipes/parse-form-data.pipe';
-import { ListWithSkus } from './types';
+import { TListProductWithSkus } from './types';
 
 @Controller('products')
 export class ProductController {
@@ -23,7 +23,8 @@ export class ProductController {
   @Post()
   @UseInterceptors(AnyFilesInterceptor())
   async create(
-    @Body(new ParseFormDataPipe(), new ValidationPipe()) dto: ProductDto,
+    @Body(new ParseFormDataPipe(ProductDto), new ValidationPipe())
+    dto: ProductDto,
     @UploadedFiles() images: Express.Multer.File[],
   ): Promise<ProductDto> {
     dto.images = images;
@@ -33,7 +34,7 @@ export class ProductController {
   @Post('/list')
   async list(
     @Body() query: ListDataDto,
-  ): Promise<{ rows: ListWithSkus; count: number }> {
+  ): Promise<{ rows: TListProductWithSkus; count: number }> {
     return await this.productService.list(query);
   }
 
@@ -46,7 +47,8 @@ export class ProductController {
   @UseInterceptors(AnyFilesInterceptor())
   async updateById(
     @Param('id') id: string,
-    @Body(new ParseFormDataPipe(), new ValidationPipe()) dto: ProductDto,
+    @Body(new ParseFormDataPipe(ProductDto), new ValidationPipe())
+    dto: ProductDto,
     @UploadedFiles() images: Express.Multer.File[],
   ): Promise<ProductDto> {
     dto.images = dto.images.filter((im) => typeof im === 'string');
